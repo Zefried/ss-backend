@@ -11,8 +11,6 @@ use Illuminate\Support\Facades\Http;
 class AuthController extends Controller
 {
 
-
-
     public function googleCallback(Request $request) {
         
         $googleClientId = env('GOOGLE_CLIENT_ID');
@@ -68,8 +66,6 @@ class AuthController extends Controller
         return response()->json(['error' => 'Failed to obtain access token', 'details' => $response->json()], 400);
     }
 
-
-
     public function storeUserAndToken($userInfo, $tokens) {
         
         // Store or update user information
@@ -102,4 +98,6 @@ class AuthController extends Controller
         $personalAccessToken = $user->createToken('Personal Access Token');
         return $personalAccessToken->plainTextToken;
     }
+
+
 }
