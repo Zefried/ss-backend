@@ -24,6 +24,8 @@ class User extends Authenticatable
         'password',
         'pswCred',
         'role',
+        'unique_user_id',
+        'disable_status',
     ];
 
     /**

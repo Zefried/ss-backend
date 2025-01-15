@@ -19,6 +19,9 @@ return new class extends Migration
             $table->string('password')->nullable();
             $table->string('pswCred')->nullable();
             $table->string('role')->nullable();
+            $table->string('unique_user_id')->unique()->nullable();
+            $table->string('disable_status')->nullable()->default(false);
+            
             $table->rememberToken();
             $table->timestamps();
         });
