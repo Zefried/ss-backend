@@ -6,8 +6,11 @@ use App\Http\Controllers\Admin\LabController\LabController;
 use App\Http\Controllers\Admin\LabEmployee\EmployeeController;
 use App\Http\Controllers\Admin\LabTestController\TestCategoryController;
 use App\Http\Controllers\Admin\LabTestController\TestController;
+use App\Http\Controllers\Admin\PatientController\PatientLocationController;
 use App\Http\Controllers\AuthController\AdminLogin;
 use App\Http\Controllers\AuthController\AuthController;
+use App\Http\Controllers\User\PatientController\PatientController;
+use App\Models\PatientData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -27,13 +30,13 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
         // Admin Authentication controller starts here 
         Route::post('/admin-register', [AccountRegister::class, 'adminRegister']);
         Route::post('/admin-login', [AdminLogin::class, 'adminLogin']);
+        Route::post('/user-login', [AdminLogin::class, 'userLogin']); // doctor and worker login in admin controller 
         // Ends here
         
 // Auth Routes Ends here
 
 
         Route::middleware(['auth:sanctum'])->group(function () {
-           
            
             Route::prefix('admin/doctors')->group(function () {
                 // testing get and post
@@ -100,6 +103,41 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
                 Route::get('/disable-test-category/{id}', [TestCategoryController::class, 'disableTestCategory']);
                 Route::get('/disable-test/{id}', [TestController::class, 'disableTest']);
             });
+
+        });
+
+
+        Route::middleware(['auth:sanctum'])->group(function () {
+           
+            Route::prefix('user/patient-location')->group(function () {
+                // testing get and post
+                Route::get('/test', [DoctorController::class, 'test']);
+                Route::post('/newTest', [DoctorController::class, 'newTest']);
+
+                /////// Route for adding patient location
+                Route::post('/add-patient-location', [PatientLocationController::class, 'addPatientLocation']);
+                Route::post('/fetch-patient-location', [PatientLocationController::class, 'viewPatientLocation']);
+ 
+                // updating patient location data
+                Route::post('/update-patient-location', [PatientLocationController::class, 'updatePatientLocation']);
+                
+                // disabling patient location data
+                Route::get('/disable-patient-location/{id}', [PatientLocationController::class, 'disablePatientLocation']);
+
+                // fetching patient all data
+                Route::post('/fetch-patient-all-location', [PatientLocationController::class, 'fetchPatientAllLocation']);
+                /////// Ends here    
+            });
+
+
+            Route::prefix('user/patient-crud')->group(function () {
+                Route::post('add-patient', [PatientController::class, 'addPatient']);
+            });
+
+
+
+
+
 
         });
 
