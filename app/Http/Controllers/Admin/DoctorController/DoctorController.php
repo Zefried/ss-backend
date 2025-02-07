@@ -406,9 +406,6 @@ class DoctorController extends Controller
     
 
 
-
-
-
     // controller specific helpers 
 
     //helper function to double check and generate a unique user id for every account

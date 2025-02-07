@@ -9,8 +9,8 @@ use App\Http\Controllers\Admin\LabTestController\TestController;
 use App\Http\Controllers\Admin\PatientController\PatientLocationController;
 use App\Http\Controllers\AuthController\AdminLogin;
 use App\Http\Controllers\AuthController\AuthController;
+use App\Http\Controllers\User\PatientAssignFlow\PatientAssignFlow;
 use App\Http\Controllers\User\PatientController\PatientController;
-use App\Models\PatientData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -132,8 +132,21 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
 
             Route::prefix('user/patient-crud')->group(function () {
                 Route::post('add-patient', [PatientController::class, 'addPatient']);
+                Route::get('view-patient', [PatientController::class, 'viewPatient']);
+
+                Route::get('search-patient', [PatientController::class, 'searchPatients']);
+                Route::get('view-patient-card/{id}', [PatientController::class, 'viewPatientCard']);
+
             });
 
+            Route::prefix('user/patient-assign-flow')->group( function() {
+
+                Route::get('searching/test', [PatientAssignFlow::class, 'searchingTest']);
+                Route::post('assigning/test', [PatientAssignFlow::class, 'assigningTest']);
+                Route::get('view-assigned-tests', [PatientAssignFlow::class, 'viewAssignedTest']); 
+
+                
+            });
 
 
 

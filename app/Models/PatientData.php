@@ -32,6 +32,11 @@ class PatientData extends Model
 
     public function patientLocationCount()
     {
-        return $this->hasOne(Patient_location_Count::class, 'patient_id');
+        return $this->hasOne(PatientLocationCount::class, 'patient_id');
+    }
+
+    public function patientAssignFlow()
+    {
+        return $this->hasMany(PatientAssignFlow::class, 'patient_id');
     }
 }

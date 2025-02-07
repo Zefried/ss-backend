@@ -349,7 +349,7 @@ class LabController extends Controller
                     ->orWhere('district', 'like', '%' . $searchQuery . '%');
         })
         ->take(10) 
-        ->get(['phone', 'email', 'name', 'district', 'id']);
+        ->get(['phone', 'email', 'name', 'district', 'id', 'user_id']);
 
         return response()->json(['suggestions' => $suggestions]);
         

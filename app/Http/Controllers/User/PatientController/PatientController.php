@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\User\PatientController;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\Patient_location_Count;
 use App\Models\PatientData;
 use App\Models\PatientLocation;
 use App\Models\PatientLocationCount;
 use App\Models\User;
+use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class PatientController extends Controller
@@ -52,9 +53,8 @@ class PatientController extends Controller
                 $newPatientCardId = $this->generatePatientCardId($patientRequestData->patient_location_id, $userData);
        
             
-               $abc = $this->createPatientLocationCount($patientRequestData, $userData->id, $newPatientCardId);
+                $this->createPatientLocationCount($patientRequestData, $userData->id, $newPatientCardId);
 
-               return response()->json($abc);
 
                 return response()->json([
                     'status' => 201,
@@ -97,8 +97,7 @@ class PatientController extends Controller
 
     }
     
-
-    public function fetchAllPatient(Request $request)
+    public function viewPatient(Request $request)
     {
         $user = $request->user();
         
@@ -130,21 +129,57 @@ class PatientController extends Controller
         }
     }
 
-    public function autoSearchUser(request $request){
-  
+    public function searchPatients(Request $request) {
         $query = $request->input('query');
-        
-   
+    
+        // Early return for empty queries
         if (empty($query)) {
-            return response()->json(['suggestions' => []]);
+            return response()->json(['results' => []]);
         }
+    
+        try {
+            $results = PatientData::where('disable_status', '!=', '1')
+                ->where(function ($subQuery) use ($query) {
+                    $subQuery->where('name', 'like', '%' . $query . '%')
+                             ->orWhere('phone', 'like', '%' . $query . '%');
+                })
+                ->take(10)  // Limit results to 10 for efficiency
+                ->get(); 
+    
+            return response()->json([
+                'status' => 200,
+                'results' => $results,
+            ]);
+    
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'error' => 'Database error: ' . $e->getMessage(),
+                'message' => 'There was an issue with the search. Please try again.',
+            ]);
+        }
+    }
 
-        $suggestions = User::where('phone', 'like', '%' . $query . '%')
-            ->orWhere('email', 'like', '%' . $query . '%')
-            ->take(10) 
-            ->pluck('phone', 'email'); 
+    Public function viewPatientCard($id){
+        try{
+            
+            $patientData = PatientLocationCount::where('patient_id', $id)
+            ->with('patientData')->get();
+        
+            return response()->json([
+            'status' => 200,
+            'patientCountData' => $patientData,
+            ]);
 
-        return response()->json(['suggestions' => $suggestions]);
+        }catch(Exception $e){
+            
+            return response()->json([
+                'status' => 500,
+                'message' => 'Something went wrong please check network console',
+                'error' => $e->getMessage()
+            ]);
+        }   
     }
     
+
 }
