@@ -134,4 +134,122 @@ class AdminLogin extends Controller
         }
        
     }
+
+
+    public function labLogin(Request $request) 
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|email',
+                'password' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 400,
+                    'validation_error' => $validator->messages(),
+                ]);
+            }
+
+            $credentials = $request->only('email', 'password');
+
+            // Check if the user exists
+            $user = User::where('email', $credentials['email'])->first();
+
+            if (!$user || !Hash::check($credentials['password'], $user->password)) {
+                return response()->json([
+                    'status' => 401,
+                    'message' => 'Invalid email or password',
+                ]);
+            }
+
+            // Revoking all previous tokens (optional)
+            $user->tokens()->delete();
+
+            if ($user->role === 'lab') {
+                // Creating a new token for the lab user
+                $token = $user->createToken('auth_token', ['lab'])->plainTextToken;
+            } else {
+                return response()->json([
+                    'status' => 401,
+                    'message' => 'You are not authorized to access this route',
+                ]);
+            }
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Login successful',
+                'token' => $token,
+                'user' => $user,
+                'role' => $user->role,
+            ], 200);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Fatal error during login',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+
+    public function hospitalLogin(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'hospitalID' => 'required',
+                'password' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 400,
+                    'validation_error' => $validator->messages(),
+                ]);
+            }
+
+            $credentials = $request->only('hospitalID', 'password');
+
+            // Check if the hospital exists
+            $hospital = User::where('email', $credentials['hospitalID'])->first();
+
+            if (!$hospital || !Hash::check($credentials['password'], $hospital->password)) {
+                return response()->json([
+                    'status' => 401,
+                    'message' => 'Invalid hospital ID or password',
+                ]);
+            }
+
+            // Revoke all previous tokens (optional)
+            $hospital->tokens()->delete();
+
+            // Ensure only hospital role can log in
+            if ($hospital->role === 'hospital') {
+                $token = $hospital->createToken('auth_token', ['hospital'])->plainTextToken;
+            } else {
+                return response()->json([
+                    'status' => 401,
+                    'message' => 'You are not authorized to access this route',
+                ]);
+            }
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Login successful',
+                'token' => $token,
+                'hospital' => $hospital,
+                'role' => $hospital->role,
+            ], 200);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Fatal error during login',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+
 }

@@ -30,7 +30,11 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
         // Admin Authentication controller starts here 
         Route::post('/admin-register', [AccountRegister::class, 'adminRegister']);
         Route::post('/admin-login', [AdminLogin::class, 'adminLogin']);
+       
+        // using adminLogin controller for user, lab and hospital || 
         Route::post('/user-login', [AdminLogin::class, 'userLogin']); // doctor and worker login in admin controller 
+        Route::post('/lab-login', [AdminLogin::class, 'labLogin']);
+        Route::post('/hospital-login', [AdminLogin::class, 'hospitalLogin']);
         // Ends here
         
 // Auth Routes Ends here
@@ -147,9 +151,6 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
 
                 
             });
-
-
-
 
 
         });

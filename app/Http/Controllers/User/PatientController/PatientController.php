@@ -131,6 +131,7 @@ class PatientController extends Controller
 
     public function searchPatients(Request $request) {
         $query = $request->input('query');
+        $user = $request->user();  // Get the currently authenticated user
     
         // Early return for empty queries
         if (empty($query)) {
@@ -138,19 +139,35 @@ class PatientController extends Controller
         }
     
         try {
-            $results = PatientData::where('disable_status', '!=', '1')
+            // Query to fetch the patients that match the search query
+            $patientsQuery = PatientData::where('disable_status', '!=', '1')
                 ->where(function ($subQuery) use ($query) {
                     $subQuery->where('name', 'like', '%' . $query . '%')
                              ->orWhere('phone', 'like', '%' . $query . '%');
-                })
-                ->take(10)  // Limit results to 10 for efficiency
-                ->get(); 
+                });
+    
+            // Check if the associated email or user ID belongs to the authenticated user
+            $patientsQuery->where(function ($subQuery) use ($user) {
+                $subQuery->where('associated_user_email', $user->email)
+                         ->orWhere('associated_user_id', $user->id);
+            });
+    
+            $results = $patientsQuery->take(10)  // Limit results to 10 for efficiency
+                                      ->get();
+    
+            // If no results are found, return a message that the user cannot view patients that do not belong to them
+            if ($results->isEmpty()) {
+                return response()->json([
+                    'status' => 403,
+                    'message' => 'You cannot view patients that do not belong to you.',
+                ]);
+            }
     
             return response()->json([
                 'status' => 200,
                 'results' => $results,
             ]);
-    
+        
         } catch (Exception $e) {
             return response()->json([
                 'status' => 500,
@@ -159,6 +176,7 @@ class PatientController extends Controller
             ]);
         }
     }
+    
 
     Public function viewPatientCard($id){
         try{
