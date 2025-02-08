@@ -64,19 +64,24 @@ class PatientAssignFlow extends Controller
     }
 
 
-    public function viewAssignedTest(Request $request) {
+    public function viewAssignedPatients(Request $request) {
         try {
-            $user = $request->user();  // Get the currently authenticated user
+            $user = $request->user(); // Get the currently authenticated user
     
-            // Fetch all patients with their assigned tests where the associated email or user ID matches the authenticated user
-            $patients = ModelsPatientAssignFlow::with('patientData')
-                ->whereHas('patientData', function ($query) use ($user) {
+            // Base query to fetch all assigned tests
+            $patientsQuery = ModelsPatientAssignFlow::with('patientData');
+    
+            // If the user is not an admin, restrict results to their associated patients
+            if ($user->role !== 'admin') {
+                $patientsQuery->whereHas('patientData', function ($query) use ($user) {
                     $query->where(function ($subQuery) use ($user) {
                         $subQuery->where('associated_user_email', $user->email)
                                  ->orWhere('associated_user_id', $user->id);
                     });
-                })
-                ->get();
+                });
+            }
+    
+            $patients = $patientsQuery->get();
     
             // If no data found, return a message
             if ($patients->isEmpty()) {
@@ -90,6 +95,56 @@ class PatientAssignFlow extends Controller
                 'status' => 200,
                 'message' => 'Data fetched successfully',
                 'data' => $patients,
+            ]);
+    
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Fatal error',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+    
+
+    public function searchAssignedPatient(Request $request) {
+        $query = $request->input('query');
+        $user = $request->user(); // Get the currently authenticated user
+    
+        // Early return for empty queries
+        if (empty($query)) {
+            return response()->json(['results' => []]);
+        }
+    
+        try {
+            // Base query to fetch assigned patients
+            $patientsQuery = ModelsPatientAssignFlow::with('patientData')
+                ->whereHas('patientData', function ($subQuery) use ($query) {
+                    $subQuery->where('name', 'like', '%' . $query . '%')
+                             ->orWhere('phone', 'like', '%' . $query . '%');
+                });
+    
+            // Apply restrictions if the role is doctor or worker
+            if (in_array($user->role === 'user', ['doctor', 'worker'])) {
+                $patientsQuery->whereHas('patientData', function ($subQuery) use ($user) {
+                    $subQuery->where('associated_user_email', $user->email)
+                             ->orWhere('associated_user_id', $user->id);
+                });
+            }
+    
+            $results = $patientsQuery->take(10)->get(); // Limit results to 10 for efficiency
+    
+            // If no results are found, return a message
+            if ($results->isEmpty()) {
+                return response()->json([
+                    'status' => 403,
+                    'message' => 'You cannot view patients that do not belong to you.',
+                ]);
+            }
+    
+            return response()->json([
+                'status' => 200,
+                'results' => $results,
             ]);
     
         } catch (\Exception $e) {

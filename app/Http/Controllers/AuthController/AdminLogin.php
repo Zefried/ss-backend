@@ -139,43 +139,50 @@ class AdminLogin extends Controller
     public function labLogin(Request $request) 
     {
         try {
+            // Validate the incoming request using labID instead of email
             $validator = Validator::make($request->all(), [
-                'email' => 'required|email',
+                'labID' => 'required|email',
                 'password' => 'required',
             ]);
-
+    
+            // If validation fails, return the validation errors
             if ($validator->fails()) {
                 return response()->json([
                     'status' => 400,
                     'validation_error' => $validator->messages(),
                 ]);
             }
-
-            $credentials = $request->only('email', 'password');
-
-            // Check if the user exists
-            $user = User::where('email', $credentials['email'])->first();
-
+    
+            // Get the credentials from the request
+            $credentials = $request->only('labID', 'password');
+    
+            // Check if the user exists based on the labID (email in this case)
+            $user = User::where('email', $credentials['labID'])->first();
+    
+            // If user doesn't exist or password doesn't match, return error
             if (!$user || !Hash::check($credentials['password'], $user->password)) {
                 return response()->json([
                     'status' => 401,
                     'message' => 'Invalid email or password',
                 ]);
             }
-
-            // Revoking all previous tokens (optional)
+    
+            // Optional: Revoke all previous tokens
             $user->tokens()->delete();
-
+    
+            // Check if the user role is 'lab'
             if ($user->role === 'lab') {
-                // Creating a new token for the lab user
+                // Create a new token for the lab user
                 $token = $user->createToken('auth_token', ['lab'])->plainTextToken;
             } else {
+                // If the user is not authorized, return an error
                 return response()->json([
                     'status' => 401,
                     'message' => 'You are not authorized to access this route',
                 ]);
             }
-
+    
+            // Return a success response with the token and user info
             return response()->json([
                 'status' => 200,
                 'message' => 'Login successful',
@@ -183,8 +190,9 @@ class AdminLogin extends Controller
                 'user' => $user,
                 'role' => $user->role,
             ], 200);
-
+    
         } catch (Exception $e) {
+            // If any error occurs, return a fatal error response
             return response()->json([
                 'status' => 500,
                 'message' => 'Fatal error during login',
@@ -192,6 +200,7 @@ class AdminLogin extends Controller
             ]);
         }
     }
+    
 
 
     public function hospitalLogin(Request $request)

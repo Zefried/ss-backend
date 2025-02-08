@@ -147,7 +147,8 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
 
                 Route::get('searching/test', [PatientAssignFlow::class, 'searchingTest']);
                 Route::post('assigning/test', [PatientAssignFlow::class, 'assigningTest']);
-                Route::get('view-assigned-tests', [PatientAssignFlow::class, 'viewAssignedTest']); 
+                Route::get('view-assigned-patients', [PatientAssignFlow::class, 'viewAssignedPatients']); 
+                Route::get('search-assigned-patient', [PatientAssignFlow::class, 'searchAssignedPatient']); 
 
                 
             });
