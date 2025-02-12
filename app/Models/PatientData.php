@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class PatientData extends Model
 {
+
+
     protected $fillable = [
         'name',
         'patient_location',
@@ -38,5 +40,10 @@ class PatientData extends Model
     public function patientAssignFlow()
     {
         return $this->hasMany(PatientAssignFlow::class, 'patient_id');
+    }
+
+    public function billingFlow()
+    {
+        return $this->hasMany(BillingFlow::class, 'patient_id');
     }
 }

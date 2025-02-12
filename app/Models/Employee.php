@@ -22,4 +22,9 @@ class Employee extends Model
         return $this->belongsTo(LabModel::class, 'lab_id');
     }
 
+    public function billingFlow()
+    {
+        return $this->hasMany(BillingFlow::class);
+    }
+
 }

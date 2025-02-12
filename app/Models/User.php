@@ -55,4 +55,11 @@ class User extends Authenticatable
     {
         return $this->hasOne(OauthTable::class, 'user_id');
     }
+
+    // One user can have multiple billing flows
+    public function billingFlows()
+    {
+        return $this->hasMany(BillingFlow::class, 'associated_user_id');
+    }
+    
 }

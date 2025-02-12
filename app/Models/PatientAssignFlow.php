@@ -9,7 +9,12 @@ class PatientAssignFlow extends Model
     protected $fillable = [
         'patient_id',
         'tests',
+        'billing_status',   
+        'discount',          
+        'visit_count',       
+        'patient_card_id',   
     ];
+
 
     // Ensure Laravel automatically converts JSON to an array
     protected $casts = [
@@ -20,4 +25,10 @@ class PatientAssignFlow extends Model
     {
         return $this->belongsTo(PatientData::class, 'patient_id');
     }
+
+    public function billingFlow()
+    {
+        return $this->hasOne(BillingFlow::class);
+    }
+
 }

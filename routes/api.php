@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\LabTestController\TestController;
 use App\Http\Controllers\Admin\PatientController\PatientLocationController;
 use App\Http\Controllers\AuthController\AdminLogin;
 use App\Http\Controllers\AuthController\AuthController;
+use App\Http\Controllers\Lab\BillingFlow\BillingFlowController;
 use App\Http\Controllers\User\PatientAssignFlow\PatientAssignFlow;
 use App\Http\Controllers\User\PatientController\PatientController;
 use Illuminate\Http\Request;
@@ -133,7 +134,6 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
                 /////// Ends here    
             });
 
-
             Route::prefix('user/patient-crud')->group(function () {
                 Route::post('add-patient', [PatientController::class, 'addPatient']);
                 Route::get('view-patient', [PatientController::class, 'viewPatient']);
@@ -149,11 +149,29 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
                 Route::post('assigning/test', [PatientAssignFlow::class, 'assigningTest']);
                 Route::get('view-assigned-patients', [PatientAssignFlow::class, 'viewAssignedPatients']); 
                 Route::get('search-assigned-patient', [PatientAssignFlow::class, 'searchAssignedPatient']); 
+                Route::get('check-visit', [PatientAssignFlow::class, 'checkVisit']);
 
-                
             });
-
 
         });
 
+        Route::middleware(['auth:sanctum'])->group(function () {
+           
+            Route::prefix('lab/flow')->group( function() {
+
+                Route::get('/view-patient/{id}', [BillingFlowController::class, 'viewPatientById']);
+                Route::post('/submit-billing', [BillingFlowController::class, 'submitBilling']);
+                
+                Route::get('/view-paid-patients', [BillingFlowController::class, 'viewPaidPatients']);
+                Route::get('/search-paid-patients', [BillingFlowController::class, 'searchPaidPatients']);
+
+    
+            });
+
+        });
+
+
+      // id = 1
+      // col is tests 
+      // 
 
