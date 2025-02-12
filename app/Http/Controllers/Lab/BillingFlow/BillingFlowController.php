@@ -180,54 +180,56 @@ class BillingFlowController extends Controller
         $userData = $request->user();
     
         try {
-            // Step 1: Admin can see all paid patients
+            // Admin can see all paid patients
             if ($userData->role === 'admin') {
                 $paidPatientIds = PatientAssignFlow::where('billing_status', 'paid')
                     ->pluck('patient_id')
                     ->unique();
                 
                 $paidPatients = PatientData::whereIn('id', $paidPatientIds)->get();
+
                 return response()->json($paidPatients);
             }
     
-            // Step 2: Lab or Hospital can see their paid patients
-            if ($userData->role === 'lab' || $userData->role === 'hospital') {
+            // Lab or Hospital can see their paid patients
+            if (in_array($userData->role, ['lab', 'hospital'])) {
                 $labId = LabModel::where('user_id', $userData->id)->value('id');
                 if (!$labId) {
                     return response()->json(['error' => 'Lab not found'], 404);
                 }
     
-                $billingData = BillingFlow::where('lab_id', $labId)->get();
-                $patientIds = $billingData->pluck('patient_id')->unique();
-                
-                $paidPatientIds = PatientAssignFlow::whereIn('patient_id', $patientIds)
-                    ->where('billing_status', 'paid')
-                    ->pluck('patient_id')
-                    ->unique();
-                
-                $paidPatients = PatientData::whereIn('id', $paidPatientIds)->get();
+                $billingData = BillingFlow::where('lab_id', $labId)
+                    ->whereHas('patientAssignFlow', function ($q) {
+                        $q->where('billing_status', 'paid');
+                    })->pluck('patient_id')->unique();
+    
+                $paidPatients = PatientData::whereIn('id', $billingData)->get();
                 return response()->json($paidPatients);
             }
     
-            // Step 3: Users can see their paid patients
+            // Users can see their paid patients (Check in BillingFlow)
             if ($userData->role === 'user') {
-                $billingData = BillingFlow::whereHas('patientAssignFlow', function ($q) use ($userData) {
-                    $q->where('user_id', $userData->id)->where('billing_status', 'paid');
-                })->get();
+
+                $billingData = BillingFlow::where(function ($query) use ($userData) {
+                    $query->where('associated_user_id', $userData->id);
+                })->whereHas('patientAssignFlow', function ($q) {
+                    $q->where('billing_status', 'paid');
+                })->pluck('patient_id')->unique();
+
     
-                $patientIds = $billingData->pluck('patient_id')->unique();
-                $paidPatients = PatientData::whereIn('id', $patientIds)->get();
-    
+                $paidPatients = PatientData::whereIn('id', $billingData)->get();
+
                 return response()->json($paidPatients);
             }
     
             return response()->json(['error' => 'Unauthorized role'], 403);
+
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
     
-    
+
     
 
     public function searchPaidPatients(Request $request) {

@@ -35,6 +35,7 @@ class PatientAssignFlow extends Controller
         return response()->json(['suggestions' => $suggestions]);
     }
 
+    
     public function assigningTest(Request $request) {
         try {
 
@@ -95,7 +96,7 @@ class PatientAssignFlow extends Controller
         try {
             $user = $request->user();
             $patientsQuery = ModelsPatientAssignFlow::with('patientData');
-        
+    
             // For non-admin users, filter by associated patientData
             if ($user->role !== 'admin') {
                 $patientsQuery->whereHas('patientData', function($query) use ($user) {
@@ -105,25 +106,32 @@ class PatientAssignFlow extends Controller
                     });
                 });
             }
-        
-            // Filter for pending billing_status directly in ModelsPatientAssignFlow
-            $patientsQuery->where('billing_status', 'pending');
-            
+    
+            // Exclude paid patients for lab or hospital roles
+            if (in_array($user->role, ['lab', 'hospital', 'admin'])) {
+                $patientsQuery->where('billing_status', 'pending');
+            }
+
+            // Additional logic for 'user' role: Check billing_status before returning data
+            if ($user->role === 'user') {
+                $patientsQuery->where('billing_status', 'pending');
+            }
+    
             $patients = $patientsQuery->get();
-        
+    
             if ($patients->isEmpty()) {
                 return response()->json([
                     'status' => 403,
                     'message' => 'No assigned patient data found | May be all paid',
                 ]);
             }
-        
+    
             return response()->json([
                 'status' => 200,
                 'message' => 'Data fetched successfully',
                 'data' => $patients,
             ]);
-
+    
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
@@ -131,12 +139,13 @@ class PatientAssignFlow extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
-        
-        
+
     }
+    
     
 
     public function searchAssignedPatient(Request $request) {
+
         $query = $request->input('query');
         $user = $request->user(); // Get the currently authenticated user
     
@@ -166,13 +175,24 @@ class PatientAssignFlow extends Controller
                 });
             }
     
+            
+            // Exclude paid patients for lab or hospital roles
+            if (in_array($user->role, ['lab', 'hospital'])) {
+                $patientsQuery->where('billing_status', 'pending');
+            }
+
+              // Exclude paid patients if the role is admin
+            if ($user->role === 'admin') {
+                $patientsQuery->where('billing_status', '!=', 'paid');
+            }
+
             $results = $patientsQuery->take(10)->get(); // Limit results to 10 for efficiency
     
             // If no results are found, return a message
             if ($results->isEmpty()) {
                 return response()->json([
                     'status' => 403,
-                    'message' => 'You cannot view patients that do not belong to you.',
+                    'message' => 'No Pending Assign Patient Available',
                 ]);
             }
     
@@ -189,6 +209,10 @@ class PatientAssignFlow extends Controller
             ]);
         }
     }
+
+
+
+
 
     public function checkVisit(){
         return response()->json([
