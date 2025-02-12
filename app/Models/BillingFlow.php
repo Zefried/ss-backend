@@ -47,4 +47,6 @@ class BillingFlow extends Model
     {
         return $this->belongsTo(PatientAssignFlow::class, 'patient_assign_flow_id');
     }
+
+    
 }

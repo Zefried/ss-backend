@@ -108,9 +108,10 @@ class PatientAssignFlow extends Controller
             }
     
             // Exclude paid patients for lab or hospital roles
-            if (in_array($user->role, ['lab', 'hospital', 'admin'])) {
+            if (in_array($user->role, ['lab', 'hospital', 'admin'], true)) {
                 $patientsQuery->where('billing_status', 'pending');
             }
+            
 
             // Additional logic for 'user' role: Check billing_status before returning data
             if ($user->role === 'user') {
@@ -166,14 +167,21 @@ class PatientAssignFlow extends Controller
             });
 
         
-    
-            // Apply restrictions if the role is doctor or worker
-            if (in_array($user->role === 'user', ['doctor', 'worker'])) {
-                $patientsQuery->whereHas('patientData', function ($subQuery) use ($user) {
-                    $subQuery->where('associated_user_email', $user->email)
-                             ->orWhere('associated_user_id', $user->id);
+        
+                // Apply restrictions if the role is user or worker
+            if (in_array($user->role, ['user', 'worker'], true)) {
+                $patientsQuery->whereHas('patientData', function ($query) {
+                    $query->where('billing_status', 'pending');
+                })
+                ->whereHas('patientData', function ($subQuery) use ($user) {
+                    $subQuery->where(function($subQuery) use ($user) {
+                        $subQuery->where('associated_user_email', $user->email)
+                                ->orWhere('associated_user_id', $user->id);
+                    });
                 });
             }
+
+
     
             
             // Exclude paid patients for lab or hospital roles

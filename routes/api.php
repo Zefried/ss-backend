@@ -155,6 +155,7 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
 
         });
 
+        
         Route::middleware(['auth:sanctum'])->group(function () {
            
             Route::prefix('lab/flow')->group( function() {
@@ -165,13 +166,11 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
                 Route::get('/view-paid-patients', [BillingFlowController::class, 'viewPaidPatients']);
                 Route::get('/search-paid-patients', [BillingFlowController::class, 'searchPaidPatients']);
 
-    
+                Route::get('/view-patient-bill/{id}', [BillingFlowController::class, 'ViewPatientBillPdf']);
+
             });
 
         });
 
 
-      // id = 1
-      // col is tests 
-      // 
 

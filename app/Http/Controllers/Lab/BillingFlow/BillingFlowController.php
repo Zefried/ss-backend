@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Lab\BillingFlow;
 
+use \PDF;
 use App\Http\Controllers\Controller;
 use App\Models\BillingFlow;
 use App\Models\Employee;
 use App\Models\LabModel;
 use App\Models\PatientAssignFlow;
 use App\Models\PatientData;
+use App\Models\Test;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -111,7 +113,7 @@ class BillingFlowController extends Controller
                 'transaction_id' => 'BILL' . strtoupper(Str::random(8)), // Generate transaction ID
             ]);
 
-            // Remove selected tests from patient assign flow
+            // if the billing resource is successfully created 
             if ($patientFlow) {
 
 
@@ -120,17 +122,16 @@ class BillingFlowController extends Controller
                 }
                 
                 
-                if(empty($PatientFlow->tests)){
-                    
-                    $patientFlow->billing_status = 'paid';
-                    $patientFlow->save(); // Save the change to the database
-
-                }else{
-                    return response()->json('test fields not empty test exist');
-                }
+               $patientAssignData = $this->updateBillingStatus($patientFlow);
 
 
-                $patientFlow->save();
+               if ($patientAssignData && empty($patientAssignData->tests)) {
+
+                $patientAssignData->billing_status = 'paid'; 
+                $patientAssignData->save(); // Save the changes
+
+               }
+            
             }
 
             DB::commit();
@@ -174,6 +175,15 @@ class BillingFlowController extends Controller
         return response()->json(['message' => 'Test removed successfully', 'updated_tests' => $updatedTests]);
 
     }
+
+    public function updateBillingStatus($patientFlow) {
+
+       $data = PatientAssignFlow::where('patient_id', $patientFlow->patient_id)->first();
+     
+       return $data;
+       
+    }
+
     
 
     public function viewPaidPatients(Request $request) {
@@ -228,8 +238,6 @@ class BillingFlowController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-    
-
     
 
     public function searchPaidPatients(Request $request) {
@@ -304,6 +312,47 @@ class BillingFlowController extends Controller
         }
     }
     
+
+    public function ViewPatientBillPdf(Request $request, $id) {
+        try {
+            // Get the authenticated user data
+            $userData = $request->user();
+    
+            // Fetch lab_id based on user_id
+            $labId = labModel::where('user_id', $userData->id)->value('id');
+    
+            // Fetch patient billing data
+            $patientData = BillingFlow::where('patient_id', $id)
+                ->where('lab_id', $labId)
+                ->get()
+                ->toArray();
+    
+            // Extract all test IDs
+            $testIds = collect($patientData)->pluck('tests')->flatten()->unique()->toArray();
+    
+            // Fetch test names
+            $testNames = Test::whereIn('id', $testIds)->pluck('name', 'id');
+    
+            // Attach test names to each bill entry
+            foreach ($patientData as &$bill) {
+                $bill['tests'] = array_map(fn($testId) => $testNames[$testId] ?? 'Unknown', $bill['tests']);
+            }
+    
+            return response()->json($patientData);
+    
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Failed to fetch patient bill data.',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+    
+    
+    
+
+
     
     
 
