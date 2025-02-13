@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\PatientController\PatientLocationController;
 use App\Http\Controllers\AuthController\AdminLogin;
 use App\Http\Controllers\AuthController\AuthController;
 use App\Http\Controllers\Lab\BillingFlow\BillingFlowController;
+use App\Http\Controllers\Reports\ReportsController;
 use App\Http\Controllers\User\PatientAssignFlow\PatientAssignFlow;
 use App\Http\Controllers\User\PatientController\PatientController;
 use Illuminate\Http\Request;
@@ -155,7 +156,7 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
 
         });
 
-        
+
         Route::middleware(['auth:sanctum'])->group(function () {
            
             Route::prefix('lab/flow')->group( function() {
@@ -168,9 +169,57 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
 
                 Route::get('/view-patient-bill/{id}', [BillingFlowController::class, 'ViewPatientBillPdf']);
 
+                /// Routes for pending patient work 
+
+                Route::get('/view-pending-patients', [BillingFlowController::class, 'viewPendingPatients']);
+                Route::get('/search-pending-patients', [BillingFlowController::class, 'searchPendingPatients']);
+
             });
 
         });
 
+
+        // report || dashboard work starts here
+
+        Route::middleware(['auth:sanctum'])->group(function () {
+           
+            Route::prefix('report/lab')->group( function() {
+
+                // total patient that are billed in the lab
+                Route::get('/patient-billing', [ReportsController::class, 'getBillingCount']);
+                Route::get('/patient-billing/filter', [ReportsController::class, 'getFilteredBillingCount']);
+               
+                // Total revenue generated
+                Route::get('/total-revenue', [ReportsController::class, 'getTotalRevenue']);
+                Route::get('/total-revenue/filter', [ReportsController::class, 'getFilteredRevenue']);
+
+            });
+
+            // Admin Dashboard Routes
+            Route::prefix('admin')->group(function () {
+                // Total Doctors and Workers
+                Route::get('/total-doctors-workers', [ReportsController::class, 'getTotalDoctorsAndWorkers']);
+
+                // Total Labs and Hospitals
+                Route::get('/total-labs-hospitals', [ReportsController::class, 'getTotalLabsAndHospitals']);
+
+                // Total Patients
+                Route::get('/total-patients', [ReportsController::class, 'getTotalPatients']);
+
+                // Total Assigned Patients (with and without filter)
+                Route::get('/total-assigned-patients', [ReportsController::class, 'getTotalAssignedPatients']);
+                Route::get('/total-assigned-patients/filter', [ReportsController::class, 'getFilteredAssignedPatients']);
+
+                // Total Billed Patients (with and without filter)
+                Route::get('/total-billed-patients', [ReportsController::class, 'getTotalBilledPatients']);
+                Route::get('/total-billed-patients/filter', [ReportsController::class, 'getFilteredBilledPatients']);
+
+                // Total Revenue (with and without filter)
+                Route::get('/total-revenue', [ReportsController::class, 'getTotalRevenue']);
+                Route::get('/total-revenue/filter', [ReportsController::class, 'getFilteredRevenue']);
+            });  
+
+
+        });
 
 

@@ -176,6 +176,7 @@ class BillingFlowController extends Controller
 
     }
 
+
     public function updateBillingStatus($patientFlow) {
 
        $data = PatientAssignFlow::where('patient_id', $patientFlow->patient_id)->first();
@@ -349,6 +350,133 @@ class BillingFlowController extends Controller
         }
     }
     
+    
+
+    ////// working on pending patient api's 
+
+    
+    public function viewPendingPatients(Request $request) {
+        $userData = $request->user();
+    
+        try {
+            // Admin can see all pending patients
+            if ($userData->role === 'admin') {
+                $pendingPatientIds = PatientAssignFlow::where('billing_status', 'pending')
+                    ->pluck('patient_id')
+                    ->unique();
+    
+                $pendingPatients = PatientData::whereIn('id', $pendingPatientIds)->get();
+    
+                return response()->json($pendingPatients);
+            }
+    
+            // Lab or Hospital can see their pending patients
+            if (in_array($userData->role, ['lab', 'hospital'])) {
+                $labId = LabModel::where('user_id', $userData->id)->value('id');
+                if (!$labId) {
+                    return response()->json(['error' => 'Lab not found'], 404);
+                }
+    
+                $billingData = BillingFlow::where('lab_id', $labId)
+                    ->whereHas('patientAssignFlow', function ($q) {
+                        $q->where('billing_status', 'pending');
+                    })->pluck('patient_id')->unique();
+    
+                $pendingPatients = PatientData::whereIn('id', $billingData)->get();
+                return response()->json($pendingPatients);
+            }
+    
+            // Users can see their pending patients (Check in BillingFlow)
+            if ($userData->role === 'user') {
+                $billingData = BillingFlow::where('associated_user_id', $userData->id)
+                    ->whereHas('patientAssignFlow', function ($q) {
+                        $q->where('billing_status', 'pending');
+                    })->pluck('patient_id')->unique();
+    
+                $pendingPatients = PatientData::whereIn('id', $billingData)->get();
+    
+                return response()->json($pendingPatients);
+            }
+    
+            return response()->json(['error' => 'Unauthorized role'], 403);
+    
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+    
+    public function searchPendingPatients(Request $request) {
+        $query = $request->input('query');
+        $user = $request->user(); // Get the currently authenticated user
+    
+        // Early return for empty queries
+        if (empty($query)) {
+            return response()->json(['results' => []]);
+        }
+    
+        try {
+            // Base query to fetch pending patients
+            $patientsQuery = PatientAssignFlow::with('patientData')
+                ->where('billing_status', 'pending')
+                ->where(function ($queryBuilder) use ($query) {
+                    $queryBuilder->where('patient_card_id', 'like', "%{$query}%") // Filter by patient_card_id
+                        ->orWhereHas('patientData', function ($subQuery) use ($query) {
+                            $subQuery->where('name', 'like', "%{$query}%")
+                                ->orWhere('phone', 'like', "%{$query}%");
+                        });
+                });
+    
+            // Apply restrictions if the role is doctor or worker
+            if (in_array($user->role, ['doctor', 'worker'])) {
+                $patientsQuery->whereHas('patientData', function ($subQuery) use ($user) {
+                    $subQuery->where('associated_user_email', $user->email)
+                             ->orWhere('associated_user_id', $user->id);
+                });
+            }
+    
+            // Apply restrictions if the role is lab or hospital
+            if (in_array($user->role, ['lab', 'hospital'])) {
+                // Fetch lab ID associated with the user
+                $labData = LabModel::where('user_id', $user->id)->first();
+    
+                if (!$labData) {
+                    return response()->json([
+                        'status' => 403,
+                        'message' => 'You do not have access to this data.',
+                    ]);
+                }
+    
+                $labId = $labData->id;
+    
+                // Ensure the patient has a pending record in the lab
+                $patientsQuery->whereHas('billingFlow', function ($subQuery) use ($labId) {
+                    $subQuery->where('lab_id', $labId);
+                });
+            }
+    
+            $results = $patientsQuery->take(10)->get(); // Limit results to 10 for efficiency
+    
+            // If no results are found, return a message
+            if ($results->isEmpty()) {
+                return response()->json([
+                    'status' => 403,
+                    'message' => 'You cannot view patients that do not belong to you.',
+                ]);
+            }
+    
+            return response()->json([
+                'status' => 200,
+                'results' => $results,
+            ]);
+    
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Fatal error',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
     
     
 
