@@ -10,6 +10,7 @@ use App\Models\PatientAssignFlow;
 use App\Models\PatientData;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class ReportsController extends Controller
 {
@@ -145,6 +146,44 @@ class ReportsController extends Controller
             }
 
             $totalRevenue = $query->sum('final_amount');
+
+            return response()->json([
+                'status' => 200,
+                'total' => $totalRevenue,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Failed to fetch filtered total revenue',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+    public function employeeLabRevenue(Request $request)
+    {
+        try {
+            $userData = $request->user();
+            $lab = LabModel::where('user_id', $userData->id)->first();
+
+            if (!$lab) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => 'Lab not found for the user',
+                ]);
+            }
+
+            $startDate = $request->query('start_date');
+            $endDate = $request->query('end_date');
+            $employeeId = $request->query('employee_id');
+
+            $totalRevenue = BillingFlow::where('lab_id', $lab->id)
+            ->when($startDate && $endDate, fn($q) => 
+                $q->whereBetween('created_at', [$startDate, Carbon::parse($endDate)->endOfDay()])
+            )
+            ->when($employeeId, fn($q) => $q->where('selected_employee_id', $employeeId))
+            ->sum('final_amount');
 
             return response()->json([
                 'status' => 200,

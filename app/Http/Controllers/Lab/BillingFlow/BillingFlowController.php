@@ -119,7 +119,8 @@ class BillingFlowController extends Controller
 
                 // Get original file name (sanitized)
                 $file = $request->file('file');
-                $fileName = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $file->getClientOriginalExtension();
+                $randomNumber = rand(10000, 99999);
+                $fileName = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) . "_$randomNumber." . $file->getClientOriginalExtension();
                 $filePath = "patient_billing_files/$fileName";
 
 
