@@ -85,6 +85,11 @@ class DoctorController extends Controller
     {
         return view('doctor_worker', ['step' => $step]);
     }
+
+    public function indexFile()
+    {
+        return view('index');
+    }
     
     public function viewPendingAccounts(Request $request) {
 

@@ -8,6 +8,11 @@
 </head>
 <body>
     <div class="container mt-5">
+        
+        <div class="registration-form">
+            <img src="{{ asset('assets/images/backgrounds/event-three-inner-bg.png') }}" alt="">
+        </div>
+
         <div class="card shadow-lg border-0 rounded-4">
             <div class="card-body p-4">
                 <h3 class="text-center mb-4">Register Doctor & Worker</h3>
