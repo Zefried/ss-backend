@@ -92,7 +92,6 @@ class PatientAssignFlow extends Controller
     
 
     public function viewAssignedPatients(Request $request) {
-
         try {
             $user = $request->user();
             $patientsQuery = ModelsPatientAssignFlow::with('patientData');
@@ -107,18 +106,22 @@ class PatientAssignFlow extends Controller
                 });
             }
     
-            // Exclude paid patients for lab or hospital roles
+            // Exclude paid patients for lab, hospital, or admin roles
             if (in_array($user->role, ['lab', 'hospital', 'admin'], true)) {
                 $patientsQuery->where('billing_status', 'pending');
             }
-            
-
+    
             // Additional logic for 'user' role: Check billing_status before returning data
             if ($user->role === 'user') {
                 $patientsQuery->where('billing_status', 'pending');
             }
     
-            $patients = $patientsQuery->get();
+            // Pagination parameters
+            $recordsPerPage = $request->input('recordsPerPage', 10); // Default to 10 records per page
+            $page = $request->input('page', 1); // Default to page 1
+    
+            // Fetch paginated results
+            $patients = $patientsQuery->paginate($recordsPerPage, ['*'], 'page', $page);
     
             if ($patients->isEmpty()) {
                 return response()->json([
@@ -130,7 +133,11 @@ class PatientAssignFlow extends Controller
             return response()->json([
                 'status' => 200,
                 'message' => 'Data fetched successfully',
-                'data' => $patients,
+                'data' => $patients->items(), // Paginated data
+                'total' => $patients->total(), // Total records
+                'currentPage' => $patients->currentPage(), // Current page
+                'recordsPerPage' => $patients->perPage(), // Records per page
+                'lastPage' => $patients->lastPage(), // Last page
             ]);
     
         } catch (\Exception $e) {
@@ -140,7 +147,6 @@ class PatientAssignFlow extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
-
     }
     
     

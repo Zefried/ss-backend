@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('lab_id')->nullable(); // Stores lab id
             $table->unsignedBigInteger('patient_assign_flow_id')->nullable(); // Stores patient assign flow id
             $table->string('transaction_id')->nullable(); // Fixed snake_case naming
-
+            $table->string('bill_file')->nullable(); // Ensure bill_file is included
             
             // Indexes
             $table->index('lab_id');

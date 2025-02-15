@@ -8,7 +8,9 @@ use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class DoctorController extends Controller
 {
@@ -17,9 +19,240 @@ class DoctorController extends Controller
     }
 
 
-    public function newTest(){
-        return response()->json(['message' => 'Hello World']);
+
+    // web route to open the blade
+
+    public function testDoctor(Request $request)
+    {
+        try {
+            // Validate the request data
+            $validated = $request->validate([
+                'designation' => 'required|string|max:255',
+                'name' => 'required|string|max:255',
+                'age' => 'required|numeric',
+                'sex' => 'required|string|max:255',
+                'phone' => 'required|string|max:20',
+                'email' => 'required|email|max:255|unique:users,email',
+                'consent_file' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'village' => 'nullable|string|max:255',
+                'district' => 'required|nullable|string|max:255',
+                'buildingNo' => 'nullable|string|max:255',
+                'state' => 'nullable|string|max:255',
+                'account_request' => 'required|',
+            ]);
+    
+            // Check if the email already exists in the DoctorAndWorker model
+            if (User::where('email', $validated['email'])->exists()) {
+                return redirect()->back()
+                    ->withErrors(['email' => 'The email already exists in the DoctorAndWorker model.'])
+                    ->withInput();
+            }
+    
+            // Check if the phone already exists in the DoctorAndWorker model
+            if (DoctorAndWorker::where('phone', $validated['phone'])->exists()) {
+                return redirect()->back()
+                    ->withErrors(['phone' => 'The phone number already exists in the DoctorAndWorker model.'])
+                    ->withInput();
+            }
+    
+            // Handle file upload
+            if ($request->hasFile('consent_file')) {
+                $file = $request->file('consent_file');
+                $fileName = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $file->getClientOriginalExtension();
+                $filePath = "consent_files/$fileName";
+    
+                // Store new file
+                $file->storeAs('consent_files', $fileName, 'public');
+    
+                // Add the file path to the validated data
+                $validated['consent_file'] = $filePath;
+            }
+    
+            // Create a new record in the DoctorAndWorker model
+            DoctorAndWorker::create($validated);
+    
+            return redirect()->route('form.submit')->with('success', 'Form submitted successfully!');
+    
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withErrors(['error' => 'Something went wrong: ' . $e->getMessage()])
+                ->withInput();
+        }
     }
+    
+
+    public function showForm($step)
+    {
+        return view('doctor_worker', ['step' => $step]);
+    }
+    
+    public function viewPendingAccounts(Request $request) {
+
+        // Set default values for pagination
+        $page = $request->input('page', 1);
+        $recordsPerPage = $request->input('recordsPerPage', 10);
+
+        // Query the DoctorAndWorker model for pending accounts
+        $query = DoctorAndWorker::where('account_request', true);
+
+        // Get the total count of pending accounts
+        $total = $query->count();
+
+        // Paginate the results
+        $listData = $query->paginate($recordsPerPage, ['*'], 'page', $page);
+
+        // Calculate the last page number
+        $lastPage = $listData->lastPage();
+
+        // Prepare the response data
+        $response = [
+            'status' => 200,
+            'message' => 'Pending accounts fetched successfully.',
+            'listData' => $listData->items(),
+            'total' => $total,
+            'last_page' => $lastPage,
+            'current_page' => $listData->currentPage(),
+        ];
+
+        // Return the JSON response
+        return response()->json($response);
+    }
+
+    public function searchPendingAccounts(Request $request)
+    {
+        // Validate the request for the search query
+        $request->validate([
+            'query' => 'required|string|min:1', // Ensure a search query is provided
+        ]);
+
+        // Get the search query from the request
+        $query = $request->input('query');
+
+        // Query the DoctorAndWorker model for pending accounts
+        $results = DoctorAndWorker::where('account_request', true)
+            ->where(function ($q) use ($query) {
+                // Search by name, email, phone, or any other relevant fields
+                $q->where('name', 'like', "%{$query}%")
+                ->orWhere('email', 'like', "%{$query}%")
+                ->orWhere('phone', 'like', "%{$query}%")
+                ->orWhere('workDistrict', 'like', "%{$query}%");
+            })
+            ->get();
+
+        // Check if any results were found
+        if ($results->isEmpty()) {
+            return response()->json([
+                'status' => 404,
+                'message' => 'No matching pending accounts found.',
+                'suggestions' => [],
+            ], 404);
+        }
+
+        // Prepare the response data
+        $response = [
+            'status' => 200,
+            'message' => 'Search results fetched successfully.',
+            'suggestions' => $results,
+        ];
+
+        // Return the JSON response
+        return response()->json($response);
+    }
+
+    public function acceptPendingAccounts(Request $request)
+    {
+        // Validate the request
+        $request->validate([
+            'id' => 'required|integer|exists:doctor_and_workers,id', // Ensure the ID exists in the table
+        ]);
+
+        // Start a database transaction
+        DB::beginTransaction();
+
+        try {
+            // Find the pending account
+            $pendingAccount = DoctorAndWorker::find($request->input('id'));
+
+            // Check if the account is already accepted
+            if ($pendingAccount->account_request === false) {
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'This account request has already been accepted.',
+                ], 400);
+            }
+
+            // Create a new user in the User model
+            $randomPswCred = rand(1000, 9999);
+
+            $user = User::create([
+                'name' => $pendingAccount->name,
+                'email' => $pendingAccount->email,
+                'password' => bcrypt($randomPswCred), // Hash the password for login
+                'pswCred' => $randomPswCred, // Store plain 4-digit password for retrieval
+                'role' => 'user',
+                'unique_user_id' => $this->generateUniqueUserId(),
+            ]);
+
+            // Associate the user with the DoctorAndWorker record
+            $pendingAccount->update([
+                'user_id' => $user->id,
+                'account_request' => false,
+            ]);
+
+            // Commit the transaction
+            DB::commit();
+
+            // Return a success response
+            return response()->json([
+                'status' => 200,
+                'message' => 'Account request accepted successfully.',
+                'user' => $user, // Return the created user details (optional)
+            ]);
+
+        } catch (\Exception $e) {
+            // Rollback the transaction in case of an error
+            DB::rollBack();
+
+            // Return an error response
+            return response()->json([
+                'status' => 500,
+                'message' => 'An error occurred while accepting the account request.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function deletePendingAccount($id)
+    {
+        try {
+            // Find the doctor/worker record
+            $doctorWorker = DoctorAndWorker::find($id);
+
+            if (!$doctorWorker) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => 'Doctor/Worker record not found.',
+                ], 404);
+            }
+
+            // Delete the doctor/worker record
+            $doctorWorker->delete();
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Account request deleted successfully.',
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'An error occurred while deleting the account request.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // ends here 
 
 
     public function addDoctor(Request $request){
@@ -32,7 +265,7 @@ class DoctorController extends Controller
             // 'age' => 'required|integer',
             // 'sex' => 'required|string',
             // 'relativeName' => 'required|string',
-            'phone' => 'required|numeric|digits_between:10,15',  
+            'phone' => 'required|numeric|digits_between:1,10',  
             'email' => 'required|email|unique:users,email',
             // 'registrationNo' => 'required|string',
             // 'village' => 'required|string',

@@ -13,6 +13,7 @@ use App\Models\Test;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class BillingFlowController extends Controller
@@ -34,12 +35,19 @@ class BillingFlowController extends Controller
 
             // Fetch tests and patient_card_id from PatientAssignFlow model
             $assignFlow = PatientAssignFlow::where('patient_id', $id)->first();
-
+            
+        
             // Fetch logged-in user and their lab ID
-            $userId = $request->user()->id;
-            $lab_id = LabModel::where('user_id', $userId)->value('id');
+            $userData = $request->user();
+            
 
-            if (!$lab_id) {
+           if ($userData && isset($userData->id)) {
+               
+                $labData = LabModel::where('user_id', $userData->id)->first();
+           }
+                        
+
+            if (!$labData->id) {
                 return response()->json([
                     'status' => 404,
                     'message' => 'Lab not found for the given user ID.',
@@ -47,7 +55,7 @@ class BillingFlowController extends Controller
             }
 
             // Fetch employees based on lab ID
-            $employees = Employee::where('lab_id', $lab_id)->get();
+            $employees = Employee::where('lab_id', $labData->id)->get();
 
             if ($employees->isEmpty()) {
                 return response()->json([
@@ -95,10 +103,31 @@ class BillingFlowController extends Controller
 
             // fetch lab id 
             $userData = $request->user();
-            $labId = LabModel::where('user_id', $userData->id)->value('id');
+            $lab = LabModel::where('user_id', $userData->id)->first();
+            $labId = isset($lab) ? $lab->id : null;
 
             // Get patient assign flow
             $patientFlow = PatientAssignFlow::where('patient_id', $validated['patient_id'])->first();
+
+
+            // Handle file upload
+            if ($request->hasFile('file')) {
+                // Ensure the directory exists
+                if (!Storage::disk('public')->exists('patient_billing_files')) {
+                    Storage::disk('public')->makeDirectory('patient_billing_files');
+                }
+
+                // Get original file name (sanitized)
+                $file = $request->file('file');
+                $fileName = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $file->getClientOriginalExtension();
+                $filePath = "patient_billing_files/$fileName";
+
+
+                // Store new file
+                $file->storeAs('patient_billing_files', $fileName, 'public');
+    
+            }
+
 
             // Create billing record
             $billing = BillingFlow::create([
@@ -110,27 +139,24 @@ class BillingFlowController extends Controller
                 'patient_assign_flow_id' => $patientFlow ? $patientFlow->id : null,
                 'tests' => $validated['selected_tests'],
                 'lab_id' => $labId,
-                'transaction_id' => 'BILL' . strtoupper(Str::random(8)), // Generate transaction ID
+                'transaction_id' => 'SWASTHA-' . strtoupper(Str::random(3)) . rand(10000, 99999),
+                'bill_file' => $filePath ?? null, // Save file path in database
             ]);
+
 
             // if the billing resource is successfully created 
             if ($patientFlow) {
 
-
                 foreach ($validated['selected_tests'] as $testId) {
                     $this->removeSelectedTest($validated['patient_id'], $testId);
                 }
-                
-                
-               $patientAssignData = $this->updateBillingStatus($patientFlow);
+                            
+                $patientAssignData = $this->updateBillingStatus($patientFlow);
 
-
-               if ($patientAssignData && empty($patientAssignData->tests)) {
-
-                $patientAssignData->billing_status = 'paid'; 
-                $patientAssignData->save(); // Save the changes
-
-               }
+                if ($patientAssignData && empty($patientAssignData->tests)) {
+                    $patientAssignData->billing_status = 'paid'; 
+                    $patientAssignData->save(); // Save the changes
+                }
             
             }
 
@@ -141,8 +167,11 @@ class BillingFlowController extends Controller
                 'message' => 'Billing stored successfully',
                 'data' => $billing,
             ]);
+            
         } catch (\Exception $e) {
+
             DB::rollBack();
+
             return response()->json([
                 'status' => 500,
                 'message' => 'Error storing billing',

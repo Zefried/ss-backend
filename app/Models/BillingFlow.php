@@ -20,6 +20,7 @@ class BillingFlow extends Model
         'tests',
         'lab_id',
         'patient_assign_flow_id', // Fetch all bills against the single patient assign flow
+        'bill_file',
         'transaction_id',
     ];
 

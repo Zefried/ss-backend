@@ -53,6 +53,12 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
                 // doctor routes begins here
                 Route::post('/add-doctor', [DoctorController::class, 'addDoctor']);
                 Route::post('/view-doctor', [DoctorController::class, 'viewDoctor']);
+
+                Route::post('/view-pending-accounts', [DoctorController::class, 'viewPendingAccounts']);
+                Route::get('/search-pending-accounts', [DoctorController::class, 'searchPendingAccounts']);
+                Route::post('/accept-pending-accounts', [DoctorController::class, 'acceptPendingAccounts']);
+                Route::delete('/delete-pending-account/{id}', [DoctorController::class, 'deletePendingAccount']);
+
                 Route::post('/fetch-doctor/{id}', [DoctorController::class, 'fetchSingleDoctor']);
                 Route::get('/fetch-doctorCred/{Id}', [DoctorController::class, 'fetchDoctorsCred']);
                 Route::post('/change-doctorPsw/{Id}', [DoctorController::class, 'changeDocPsw']);
@@ -137,8 +143,12 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
             });
 
             Route::prefix('user/patient-crud')->group(function () {
+
                 Route::post('add-patient', [PatientController::class, 'addPatient']);
                 Route::get('view-patient', [PatientController::class, 'viewPatient']);
+                Route::get('edit-patient/{id}', [PatientController::class, 'editPatient']);
+                Route::post('update-patient/{id}', [PatientController::class, 'updatePatient']);
+                Route::get('patient-full-info/{id}', [PatientController::class, 'patientFullInfo']);
 
                 Route::get('search-patient', [PatientController::class, 'searchPatients']);
                 Route::get('view-patient-card/{id}', [PatientController::class, 'viewPatientCard']);

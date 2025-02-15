@@ -30,6 +30,7 @@ class DoctorAndWorker extends Model
         'state',
         'designation',
         'unique_user_id',
+        'consent_file',
         'disable_status',
     ];
 

@@ -129,6 +129,89 @@ class PatientController extends Controller
         }
     }
 
+    public function patientFullInfo($id)
+    {
+    
+        try {
+    
+            $patientData = PatientData::where('id', $id)->first();
+    
+            return response()->json([
+                'status' => 2,  // No need for null check
+                'message' => 'Data fetched successfully',
+                'patientData' => $patientData,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Failed to fetch data',
+                'error' => $e->getMessage(),  // Provides error message for debugging
+            ]);
+        }
+    }
+
+
+    public function editPatient($id){
+
+        try{
+
+            $patientData = PatientData::where('id', $id)->first();
+
+            return response()->json([
+             'status' => 200,
+             'message' => 'patient data fetched successfully',
+             'patientData' => $patientData,
+            ]);
+
+        }catch(Exception $e){
+
+            return response()->json([
+                'status' => 500,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage(),
+               ]);
+
+        }
+      
+
+    }
+
+
+    public function updatePatient($id, Request $request) {
+        try {
+            $patientData = PatientData::find($id);
+
+            if (!$patientData) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => 'Patient not found'
+                ]);
+            }
+
+            // Exclude `patient_location` and `phone` from the update
+            $updateData = $request->except(['patient_location', 'phone']);
+
+            $patientData->update($updateData);
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Patient updated successfully',
+                'data' => $patientData
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+
+
+
+
     public function searchPatients(Request $request) {
         $query = $request->input('query');
         $user = $request->user(); // Get the currently authenticated user
