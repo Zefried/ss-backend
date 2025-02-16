@@ -219,6 +219,7 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
 
                 // Total Patients
                 Route::get('/total-patients', [ReportsController::class, 'getTotalPatients']);
+                Route::get('/total-filtered-patients', [ReportsController::class, 'getTotalFilteredPatients']);
 
                 // Total Assigned Patients (with and without filter)
                 Route::get('/total-assigned-patients', [ReportsController::class, 'getTotalAssignedPatients']);
@@ -232,6 +233,13 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
                 Route::get('/total-revenue', [ReportsController::class, 'getTotalRevenue']);
                 Route::get('/total-revenue/filter', [ReportsController::class, 'getFilteredRevenue']);
 
+                // Total revenue against each lab with data range 
+                // No need of another route to see total lab sum revenue already done 
+                Route::get('/total-revenue-by-lab/filter', [ReportsController::class, 'AdminLabRevenueWithData']);
+
+
+                Route::get('/total-revenue-by-lab-employee/filter', [ReportsController::class, 'AdminLabRevenueByEmployee']);
+               
 
             });  
 
