@@ -237,7 +237,7 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
                 // No need of another route to see total lab sum revenue already done 
                 Route::get('/total-revenue-by-lab/filter', [ReportsController::class, 'AdminLabRevenueWithData']);
 
-
+                // Fetching lab revenue against each employee for admin panel 
                 Route::get('/total-revenue-by-lab-employee/filter', [ReportsController::class, 'AdminLabRevenueByEmployee']);
                
 

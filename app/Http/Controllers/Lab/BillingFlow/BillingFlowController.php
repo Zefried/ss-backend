@@ -219,6 +219,8 @@ class BillingFlowController extends Controller
 
     public function viewPaidPatients(Request $request) {
         $userData = $request->user();
+        $recordsPerPage = $request->input('recordsPerPage', 10); // Default 10
+        $page = $request->input('page', 1);
     
         try {
             // Admin can see all paid patients
@@ -226,10 +228,16 @@ class BillingFlowController extends Controller
                 $paidPatientIds = PatientAssignFlow::where('billing_status', 'paid')
                     ->pluck('patient_id')
                     ->unique();
-                
-                $paidPatients = PatientData::whereIn('id', $paidPatientIds)->get();
-
-                return response()->json($paidPatients);
+    
+                $paidPatients = PatientData::whereIn('id', $paidPatientIds)
+                    ->paginate($recordsPerPage, ['*'], 'page', $page);
+    
+                return response()->json([
+                    'status' => 200,
+                    'listData' => $paidPatients->items(),
+                    'total' => $paidPatients->total(),
+                    'message' => 'Data fetched successfully',
+                ]);
             }
     
             // Lab or Hospital can see their paid patients
@@ -244,31 +252,43 @@ class BillingFlowController extends Controller
                         $q->where('billing_status', 'paid');
                     })->pluck('patient_id')->unique();
     
-                $paidPatients = PatientData::whereIn('id', $billingData)->get();
-                return response()->json($paidPatients);
+                $paidPatients = PatientData::whereIn('id', $billingData)
+                    ->paginate($recordsPerPage, ['*'], 'page', $page);
+    
+                return response()->json([
+                    'status' => 200,
+                    'listData' => $paidPatients->items(),
+                    'total' => $paidPatients->total(),
+                    'message' => 'Data fetched successfully',
+                ]);
             }
     
             // Users can see their paid patients (Check in BillingFlow)
             if ($userData->role === 'user') {
-
                 $billingData = BillingFlow::where(function ($query) use ($userData) {
                     $query->where('associated_user_id', $userData->id);
                 })->whereHas('patientAssignFlow', function ($q) {
                     $q->where('billing_status', 'paid');
                 })->pluck('patient_id')->unique();
-
     
-                $paidPatients = PatientData::whereIn('id', $billingData)->get();
-
-                return response()->json($paidPatients);
+                $paidPatients = PatientData::whereIn('id', $billingData)
+                    ->paginate($recordsPerPage, ['*'], 'page', $page);
+    
+                return response()->json([
+                    'status' => 200,
+                    'listData' => $paidPatients->items(),
+                    'total' => $paidPatients->total(),
+                    'message' => 'Data fetched successfully',
+                ]);
             }
     
             return response()->json(['error' => 'Unauthorized role'], 403);
-
+    
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+    
     
 
     public function searchPaidPatients(Request $request) {
@@ -281,8 +301,9 @@ class BillingFlowController extends Controller
         }
     
         try {
-            // Base query to fetch paid patients
+            // Base query to fetch only paid patients
             $patientsQuery = PatientAssignFlow::with('patientData')
+                ->where('billing_status', 'paid') // Ensure only paid patients are returned
                 ->where(function ($queryBuilder) use ($query) {
                     $queryBuilder->where('patient_card_id', 'like', "%{$query}%") // Filter by patient_card_id
                         ->orWhereHas('patientData', function ($subQuery) use ($query) {
@@ -292,7 +313,7 @@ class BillingFlowController extends Controller
                 });
     
             // Apply restrictions if the role is doctor or worker
-            if (in_array($user->role, ['doctor', 'worker'])) {
+            if ($user->role === 'user') {
                 $patientsQuery->whereHas('patientData', function ($subQuery) use ($user) {
                     $subQuery->where('associated_user_email', $user->email)
                              ->orWhere('associated_user_id', $user->id);
@@ -343,6 +364,7 @@ class BillingFlowController extends Controller
         }
     }
     
+    
 
     public function ViewPatientBillPdf(Request $request, $id) {
         try {
@@ -387,6 +409,8 @@ class BillingFlowController extends Controller
     
     public function viewPendingPatients(Request $request) {
         $userData = $request->user();
+        $recordsPerPage = $request->input('recordsPerPage', 10); // Default 10
+        $page = $request->input('page', 1);
     
         try {
             // Admin can see all pending patients
@@ -395,9 +419,15 @@ class BillingFlowController extends Controller
                     ->pluck('patient_id')
                     ->unique();
     
-                $pendingPatients = PatientData::whereIn('id', $pendingPatientIds)->get();
+                $pendingPatients = PatientData::whereIn('id', $pendingPatientIds)
+                    ->paginate($recordsPerPage, ['*'], 'page', $page);
     
-                return response()->json($pendingPatients);
+                return response()->json([
+                    'status' => 200,
+                    'listData' => $pendingPatients->items(),
+                    'total' => $pendingPatients->total(),
+                    'message' => 'Data fetched successfully',
+                ]);
             }
     
             // Lab or Hospital can see their pending patients
@@ -412,8 +442,15 @@ class BillingFlowController extends Controller
                         $q->where('billing_status', 'pending');
                     })->pluck('patient_id')->unique();
     
-                $pendingPatients = PatientData::whereIn('id', $billingData)->get();
-                return response()->json($pendingPatients);
+                $pendingPatients = PatientData::whereIn('id', $billingData)
+                    ->paginate($recordsPerPage, ['*'], 'page', $page);
+    
+                return response()->json([
+                    'status' => 200,
+                    'listData' => $pendingPatients->items(),
+                    'total' => $pendingPatients->total(),
+                    'message' => 'Data fetched successfully',
+                ]);
             }
     
             // Users can see their pending patients (Check in BillingFlow)
@@ -423,9 +460,15 @@ class BillingFlowController extends Controller
                         $q->where('billing_status', 'pending');
                     })->pluck('patient_id')->unique();
     
-                $pendingPatients = PatientData::whereIn('id', $billingData)->get();
+                $pendingPatients = PatientData::whereIn('id', $billingData)
+                    ->paginate($recordsPerPage, ['*'], 'page', $page);
     
-                return response()->json($pendingPatients);
+                return response()->json([
+                    'status' => 200,
+                    'listData' => $pendingPatients->items(),
+                    'total' => $pendingPatients->total(),
+                    'message' => 'Data fetched successfully',
+                ]);
             }
     
             return response()->json(['error' => 'Unauthorized role'], 403);
@@ -435,7 +478,9 @@ class BillingFlowController extends Controller
         }
     }
     
+    
     public function searchPendingPatients(Request $request) {
+
         $query = $request->input('query');
         $user = $request->user(); // Get the currently authenticated user
     
@@ -457,13 +502,13 @@ class BillingFlowController extends Controller
                 });
     
             // Apply restrictions if the role is doctor or worker
-            if (in_array($user->role, ['doctor', 'worker'])) {
+            if ($user->role === 'user') {
                 $patientsQuery->whereHas('patientData', function ($subQuery) use ($user) {
                     $subQuery->where('associated_user_email', $user->email)
                              ->orWhere('associated_user_id', $user->id);
                 });
             }
-    
+
             // Apply restrictions if the role is lab or hospital
             if (in_array($user->role, ['lab', 'hospital'])) {
                 // Fetch lab ID associated with the user
