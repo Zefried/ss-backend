@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\LabTestController\TestController;
 use App\Http\Controllers\Admin\PatientController\PatientLocationController;
 use App\Http\Controllers\AuthController\AdminLogin;
 use App\Http\Controllers\AuthController\AuthController;
+use App\Http\Controllers\DisableEnableController;
 use App\Http\Controllers\Lab\BillingFlow\BillingFlowController;
 use App\Http\Controllers\Reports\ReportsController;
 use App\Http\Controllers\Reports\UserDashboardController;
@@ -190,13 +191,69 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
         });
 
 
+        // Disable or delete
+        Route::middleware(['auth:sanctum'])->group(function () {
+           
+            Route::prefix('admin')->group( function() {
+
+                ////// patient disable starts here 
+                Route::get('/disable/patient/{id}', [DisableEnableController::class, 'disablePatients']);
+                Route::post('/enable-patient/{id}', [DisableEnableController::class, 'enablePatients']);
+                Route::get('/fetch-disable-patients', [DisableEnableController::class, 'fetchDisablePatients']);
+                Route::get('/search-disable-patients', [DisableEnableController::class, 'searchDisablePatients']);
+                ////// ends here
+
+
+                ////// user disable starts here
+                Route::get('/disable/user/{id}', [DisableEnableController::class, 'disableUser']);
+                Route::post('/enable-user/{id}', [DisableEnableController::class, 'enableUser']);
+                Route::get('/fetch-disable-user', [DisableEnableController::class, 'fetchDisabledUsers']);
+                Route::get('/search-disable-user', [DisableEnableController::class, 'searchDisabledUsers']);
+                ////// ends here
+
+
+                ////// Lab disable starts here
+                Route::get('/disable/lab/{id}', [DisableEnableController::class, 'disableLab']);
+                Route::post('/enable-lab/{id}', [DisableEnableController::class, 'enableLab']);
+                Route::get('/fetch-disable-labs', [DisableEnableController::class, 'fetchDisabledLabs']);
+                Route::get('/search-disable-lab', [DisableEnableController::class, 'searchDisabledLabs']);
+                ////// Ends here
+
+
+                ////// Employee disable starts here
+                Route::get('/disable/employee/{id}', [DisableEnableController::class, 'disableEmployee']);
+                Route::post('/enable-employee/{id}', [DisableEnableController::class, 'enableEmployee']);
+                Route::get('/fetch-disable-employees', [DisableEnableController::class, 'fetchDisabledEmployees']);
+                Route::get('/search-disable-employee', [DisableEnableController::class, 'searchDisabledEmployees']);
+                ////// Ends here
+
+
+                ////// TestCategory disable starts here
+
+                ////// Ends here
+
+
+
+                ////// Tests Disable starts here
+
+
+                ////// Ends here
+
+
+
+            });
+
+        });
+        // Disable or delete 
+
+
         // report || dashboard work starts here
 
         Route::middleware(['auth:sanctum'])->group(function () {
            
             Route::prefix('report/lab')->group( function() {
 
-                // total patient that are billed in the lab
+                // total user that are billed in the lab
                 Route::get('/patient-billing', [ReportsController::class, 'getBillingCount']);
                 Route::get('/patient-billing/filter', [ReportsController::class, 'getFilteredBillingCount']);
                

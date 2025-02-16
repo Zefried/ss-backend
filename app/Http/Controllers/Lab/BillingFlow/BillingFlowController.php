@@ -370,15 +370,35 @@ class BillingFlowController extends Controller
         try {
             // Get the authenticated user data
             $userData = $request->user();
+            
+            if (!$userData) {
+                return response()->json([
+                    'status' => 401,
+                    'message' => 'Unauthorized access.',
+                ]);
+            }
     
-            // Fetch lab_id based on user_id
-            $labId = labModel::where('user_id', $userData->id)->value('id');
+            // If the user role is "user", fetch patient billing data without checking lab_id
+            if ($userData->role === 'user') {
+                $patientData = BillingFlow::where('patient_id', $id)->get()->toArray();
+            } else {
+                // Fetch lab_id based on user_id
+                $labId = labModel::where('user_id', $userData->id)->value('id');
     
-            // Fetch patient billing data
-            $patientData = BillingFlow::where('patient_id', $id)
-                ->where('lab_id', $labId)
-                ->get()
-                ->toArray();
+                // Ensure labId is valid
+                if (!$labId) {
+                    return response()->json([
+                        'status' => 404,
+                        'message' => 'Lab not found for this user.',
+                    ]);
+                }
+    
+                // Fetch patient billing data with lab_id check
+                $patientData = BillingFlow::where('patient_id', $id)
+                    ->where('lab_id', $labId)
+                    ->get()
+                    ->toArray();
+            }
     
             // Extract all test IDs
             $testIds = collect($patientData)->pluck('tests')->flatten()->unique()->toArray();
@@ -401,6 +421,8 @@ class BillingFlowController extends Controller
             ]);
         }
     }
+    
+    
     
     
 
