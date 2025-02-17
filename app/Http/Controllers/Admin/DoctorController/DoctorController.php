@@ -483,7 +483,7 @@ class DoctorController extends Controller
         
         $validator = Validator::make($request->all(), [
             'email' => 'required|',
-            'phone' => 'required|'
+            'phone' => 'required|digits:10'
         ]);
 
         if($validator->fails()){

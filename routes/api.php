@@ -224,20 +224,25 @@ Route::get('/auth/{provider}/callback', [AuthController::class, 'googleCallback'
                 Route::get('/disable/employee/{id}', [DisableEnableController::class, 'disableEmployee']);
                 Route::post('/enable-employee/{id}', [DisableEnableController::class, 'enableEmployee']);
                 Route::get('/fetch-disable-employees', [DisableEnableController::class, 'fetchDisabledEmployees']);
-                Route::get('/search-disable-employee', [DisableEnableController::class, 'searchDisabledEmployees']);
+                Route::get('/search-disable-employees', [DisableEnableController::class, 'searchDisabledEmployees']);
                 ////// Ends here
 
 
                 ////// TestCategory disable starts here
-
+                Route::get('/disable/test-category/{id}', [DisableEnableController::class, 'disableTestCategory']);
+                Route::post('/enable-test-category/{id}', [DisableEnableController::class, 'enableTestCategory']);
+                Route::get('/fetch-disable-test-categories', [DisableEnableController::class, 'fetchDisabledTestCategories']);
+                Route::get('/search-disable-test-categories', [DisableEnableController::class, 'searchDisabledTestCategories']);
                 ////// Ends here
 
 
-
-                ////// Tests Disable starts here
-
-
+                ////// Tests disable starts here
+                Route::get('/disable/test/{id}', [DisableEnableController::class, 'disableTest']);
+                Route::post('/enable-test/{id}', [DisableEnableController::class, 'enableTest']);
+                Route::get('/fetch-disable-tests', [DisableEnableController::class, 'fetchDisabledTests']);
+                Route::get('/search-disable-tests', [DisableEnableController::class, 'searchDisabledTests']);
                 ////// Ends here
+
 
 
 

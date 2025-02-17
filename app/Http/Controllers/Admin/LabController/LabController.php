@@ -166,7 +166,7 @@ class LabController extends Controller
             'district' => 'required|string',
             'landmark' => 'required|string',
             'state' => 'required|string',
-            'phone' => 'nullable|string', // Phone is optional
+            'phone' => 'nullable|digits:10', // Phone is optional
         ]);
     
         if ($validator->fails()) {
@@ -187,6 +187,7 @@ class LabController extends Controller
                 'district' => $request->input('district'),
                 'landmark' => $request->input('landmark'),
                 'state' => $request->input('state'),
+                'phone' =>$request->input('phone'),
             ]);
     
             if ($updateAccountData) {
